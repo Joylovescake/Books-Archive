@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { appendRecord, readRecentRecords } from "../../../lib/recommendations-store-kv";
+import { appendRecord } from "../../../lib/recommendations-store-kv";
 
 /**
  * POST /api/recommendations
@@ -74,34 +74,4 @@ export async function POST(req: Request) {
   }
 
   return Response.json({ id: record.id });
-}
-
-/**
- * GET /api/recommendations
- *
- * Admin-only export. Returns the most recent 50 records when the request
- * carries `?token=<RECOMMENDATIONS_ADMIN_TOKEN>` and that env is set.
- * 401 in every other case so we never expose recommendations publicly.
- */
-export async function GET(req: Request) {
-  const adminToken = process.env.RECOMMENDATIONS_ADMIN_TOKEN;
-  const url = new URL(req.url);
-  const supplied = url.searchParams.get("token");
-  if (!adminToken || !supplied || supplied !== adminToken) {
-    return Response.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  try {
-    const records = await readRecentRecords(50);
-    return Response.json({
-      backend: "kv",
-      records,
-    });
-  } catch (err) {
-    console.error("[recommendations] read failed", err);
-    return Response.json(
-      { error: "Failed to read recommendations." },
-      { status: 500 },
-    );
-  }
 }
