@@ -32,6 +32,7 @@ export default function BooksV2MusicBar() {
   const shouldAutoPlayRef = useRef(true);
   const [trackIndex, setTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -64,15 +65,12 @@ export default function BooksV2MusicBar() {
 
     if (shouldAutoPlayRef.current) {
       shouldAutoPlayRef.current = false;
-      // Best-effort autoplay: most browsers allow muted autoplay without gesture.
-      // We then immediately try to unmute after playback starts.
+      // Autoplay policy: muted autoplay is usually allowed, but unmuting
+      // without a user gesture is often blocked (esp. iOS Safari).
+      // So: start muted, keep muted until the user explicitly enables sound.
       audio.muted = true;
-      void audio
-        .play()
-        .then(() => {
-          audio.muted = false;
-        })
-        .catch(() => setIsPlaying(false));
+      setSoundEnabled(false);
+      void audio.play().catch(() => setIsPlaying(false));
       return;
     }
 
@@ -100,6 +98,11 @@ export default function BooksV2MusicBar() {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      // First user gesture: enable sound.
+      if (!soundEnabled) {
+        audio.muted = false;
+        setSoundEnabled(true);
+      }
       void audio.play().catch(() => setIsPlaying(false));
     } else {
       audio.pause();
@@ -137,7 +140,7 @@ export default function BooksV2MusicBar() {
         type="button"
         onClick={togglePlay}
         style={btnStyle}
-        aria-label={isPlaying ? "Pause" : "Play"}
+        aria-label={isPlaying ? "Pause" : soundEnabled ? "Play" : "Enable sound and play"}
       >
         {isPlaying ? (
           <svg
